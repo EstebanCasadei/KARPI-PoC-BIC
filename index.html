@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AVIF + JPEG compression proof of concept</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>AVIF + JPEG compression proof of concept</h1>
+    <p class="lede">
+      Pick one image and get three web-ready versions: an 800 px AVIF thumbnail, a main AVIF up to
+      1920 × 2800 px, and a 1200 × 630 JPEG for Open Graph. Every file is kept under the size limit,
+      and the table at the end compares size, compression ratio, SSIM and time.
+    </p>
+    <div class="status" id="codecStatus" data-state="loading" role="status">
+      <span class="dot" aria-hidden="true"></span>
+      <span id="codecStatusText">Loading the AVIF encoder…</span>
+    </div>
+  </header>
+
+  <section class="controls" aria-label="Input and settings">
+    <div class="input-col">
+      <label class="drop" id="drop">
+        <input type="file" id="fileInput" accept="image/*">
+        <div>
+          <strong>Choose an image or drop it here</strong>
+          <span>JPEG, PNG, WebP, GIF, BMP and AVIF work in every modern browser. HEIC and TIFF only open in Safari.</span>
+        </div>
+      </label>
+      <div class="sample-row">
+        <span>No image at hand?</span>
+        <button type="button" id="sampleBtn" class="secondary">Try with the sample photo</button>
+      </div>
+    </div>
+
+    <form class="settings" id="settings">
+      <div class="field">
+        <label for="limitKB">Size limit per file <small>In KB, where 1 KB = 1024 bytes</small></label>
+        <input id="limitKB" type="number" min="10" max="10000" step="10" value="600">
+      </div>
+      <div class="field">
+        <label for="avifQuality">AVIF starting quality <small>0–100. Lowered automatically if a file is over the limit</small></label>
+        <input id="avifQuality" type="number" min="1" max="100" step="1" value="60">
+      </div>
+      <div class="field">
+        <label for="avifSpeed">AVIF encoder speed <small>0 is slowest and smallest, 10 is fastest</small></label>
+        <input id="avifSpeed" type="number" min="0" max="10" step="1" value="6">
+      </div>
+      <div class="field">
+        <label for="jpegQuality">JPEG starting quality <small>1–100. browser-image-compression lowers it if needed</small></label>
+        <input id="jpegQuality" type="number" min="1" max="100" step="1" value="85">
+      </div>
+      <div class="actions">
+        <button type="button" id="rerunBtn" class="secondary" disabled>Run again with these settings</button>
+      </div>
+    </form>
+  </section>
+
+  <div class="error-box" id="errorBox" role="alert" hidden></div>
+
+  <section id="originalSection" hidden>
+    <h2>Original</h2>
+    <div class="original">
+      <div>
+        <div class="frame"><img id="originalImg" alt="Original image"></div>
+        <div class="dims" id="originalDims"></div>
+      </div>
+      <dl class="facts" id="originalFacts"></dl>
+    </div>
+  </section>
+
+  <section id="variantsSection" hidden>
+    <h2>Outputs</h2>
+    <div class="variants" id="variants"></div>
+  </section>
+
+  <section id="summarySection" hidden>
+    <h2>Results</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Output</th>
+            <th scope="col">Dimensions</th>
+            <th scope="col">Final file size</th>
+            <th scope="col">Ratio vs<br>original file</th>
+            <th scope="col">Ratio vs<br>raw bitmap</th>
+            <th scope="col">SSIM</th>
+            <th scope="col">Compression<br>time</th>
+            <th scope="col">Total time<br>(incl. resize, decode, SSIM)</th>
+          </tr>
+        </thead>
+        <tbody id="summaryBody"></tbody>
+        <tfoot id="summaryFoot"></tfoot>
+      </table>
+    </div>
+    <div class="actions summary-actions">
+      <button type="button" id="copyBtn" class="secondary">Copy results as JSON</button>
+    </div>
+
+    <div class="notes">
+      <p>
+        <strong>Ratio vs original file</strong> divides the uploaded file’s size by the output’s size, so it mixes the
+        effect of resizing and of compression. <strong>Ratio vs raw bitmap</strong> divides width × height × 4 bytes of
+        the output by its file size, which isolates the codec.
+      </p>
+      <p>
+        <strong>SSIM</strong> compares each output, decoded again, with the same resized image before compression.
+        It is measured on luma in 8 × 8 windows with a 4 px stride; transparent pixels are placed over white.
+        As a rough guide: 0.98 and above is visually identical, 0.95–0.98 excellent, 0.90–0.95 good, below 0.90 visible loss.
+      </p>
+      <p>
+        <strong>Compression time</strong> is only the encoder: every AVIF attempt during the quality search, or the
+        whole browser-image-compression call for the JPEG. The total row’s time is wall-clock for the full run,
+        including decoding the original.
+      </p>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js" defer></script>
+<script src="js/app.js" defer></script>
+</body>
+</html>
